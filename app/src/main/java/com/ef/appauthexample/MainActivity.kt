@@ -155,27 +155,26 @@ class MainActivity : AppCompatActivity() {
     class AuthorizeListener : View.OnClickListener {
         override fun onClick(view: View) {
             val serviceConfiguration = AuthorizationServiceConfiguration(
-                    Uri.parse("https://accounts.google.com/o/oauth2/v2/auth"),
-                    Uri.parse("https://www.googleapis.com/oauth2/v4/token")
+                    Uri.parse("https://internal-cne1qasso-int-alb-1026644593.cn-north-1.elb.amazonaws.com.cn/connect/authorize"),
+                    Uri.parse("https://internal-cne1qasso-int-alb-1026644593.cn-north-1.elb.amazonaws.com.cn/connect/token")
             )
 
-            val clientId = "511828570984-fuprh0cm7665emlne3rnf9pk34kkn86s.apps.googleusercontent.com"
-            val redirectUri = Uri.parse("com.google.codelabs.appauth:/oauth2callback")
-            val builder = AuthorizationRequest.Builder(
+            val request = AuthorizationRequest.Builder(
                     serviceConfiguration,
-                    clientId,
+                    "efpv2.mobile.client",
                     ResponseTypeValues.CODE,
-                    redirectUri
+                    Uri.parse("com.ef.appauthexample:/oauth2callback")
             )
-            builder.setScopes("profile")
-            val request = builder.build()
+                    .setScopes("openid", "efpv2")
+                    .build()
 
-            val authorizationService: AuthorizationService = AuthorizationService(view.getContext())
-
-            val action = "com.ef.appauthexample.HANDLE_AUTHORIZATION_RESPONSE"
-            val postAuthorizationIntent = Intent(action)
-            val pendingIntent = PendingIntent.getActivity(view.context, request.hashCode(), postAuthorizationIntent, 0)
-            authorizationService.performAuthorizationRequest(request, pendingIntent)
+            val pendingIntent = PendingIntent.getActivity(
+                    view.context,
+                    request.hashCode(),
+                    Intent("com.ef.appauthexample.HANDLE_AUTHORIZATION_RESPONSE"),
+                    0
+            )
+            AuthorizationService(view.getContext()).performAuthorizationRequest(request, pendingIntent)
         }
     }
 
