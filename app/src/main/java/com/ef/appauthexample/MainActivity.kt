@@ -17,7 +17,14 @@ import com.ef.appauthexample.MainApplication.Companion.LOG_TAG
 import net.openid.appauth.*
 import org.json.JSONException
 
-val AUTH_RESPONSE_ACTION = "com.ef.appauthexample.HANDLE_AUTHORIZATION_RESPONSE"
+private val AUTH_CLIENT_ID = "efpv2.mobile.client"
+private val AUTH_RESPONSE_ACTION = "com.ef.appauthexample.HANDLE_AUTHORIZATION_RESPONSE"
+private val AUTH_REDIRECT_URL = Uri.parse("com.ef.appauthexample:/oauth2callback")
+
+private val AUTH_SERVICE_CONFIG = AuthorizationServiceConfiguration(
+        Uri.parse("https://internal-cne1qasso-int-alb-1026644593.cn-north-1.elb.amazonaws.com.cn/connect/authorize"),
+        Uri.parse("https://internal-cne1qasso-int-alb-1026644593.cn-north-1.elb.amazonaws.com.cn/connect/token")
+)
 
 class MainActivity : AppCompatActivity() {
 
@@ -137,13 +144,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkIntent(intent: Intent?) {
-        if (intent != null) {
-            val action = intent.action
-            when (action) {
-                AUTH_RESPONSE_ACTION -> if (!intent.hasExtra(USED_INTENT)) {
-                    handleAuthorizationResponse(intent)
-                    intent.putExtra(USED_INTENT, true)
-                }
+        if (intent == null) return
+        val action = intent.action
+        when (action) {
+            AUTH_RESPONSE_ACTION -> if (!intent.hasExtra(USED_INTENT)) {
+                handleAuthorizationResponse(intent)
+                intent.putExtra(USED_INTENT, true)
             }
         }
     }
@@ -158,16 +164,11 @@ class MainActivity : AppCompatActivity() {
      */
     class AuthorizeListener : View.OnClickListener {
         override fun onClick(view: View) {
-            val serviceConfiguration = AuthorizationServiceConfiguration(
-                    Uri.parse("https://internal-cne1qasso-int-alb-1026644593.cn-north-1.elb.amazonaws.com.cn/connect/authorize"),
-                    Uri.parse("https://internal-cne1qasso-int-alb-1026644593.cn-north-1.elb.amazonaws.com.cn/connect/token")
-            )
-
             val request = AuthorizationRequest.Builder(
-                    serviceConfiguration,
-                    "efpv2.mobile.client",
+                    AUTH_SERVICE_CONFIG,
+                    AUTH_CLIENT_ID,
                     ResponseTypeValues.CODE,
-                    Uri.parse("com.ef.appauthexample:/oauth2callback")
+                    AUTH_REDIRECT_URL
             )
                     .setScopes("openid", "efpv2")
                     .build()
