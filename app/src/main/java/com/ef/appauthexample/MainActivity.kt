@@ -1,5 +1,6 @@
 package com.ef.appauthexample
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -16,25 +17,27 @@ import com.ef.appauthexample.MainApplication.Companion.LOG_TAG
 import net.openid.appauth.*
 import org.json.JSONException
 
+val AUTH_RESPONSE_ACTION = "com.ef.appauthexample.HANDLE_AUTHORIZATION_RESPONSE"
+
 class MainActivity : AppCompatActivity() {
 
     private val SHARED_PREFERENCES_NAME = "AuthStatePreference"
     private val AUTH_STATE = "AUTH_STATE"
     private val USED_INTENT = "USED_INTENT"
 
-    var mMainApplication: MainApplication? = null
+    private var mMainApplication: MainApplication? = null
 
     // state
     var mAuthState: AuthState? = null
 
     // views
-    var mAuthorize: AppCompatButton? = null
-    var mMakeApiCall: AppCompatButton? = null
-    var mSignOut: AppCompatButton? = null
-    var mGivenName: AppCompatTextView? = null
-    var mFamilyName: AppCompatTextView? = null
-    var mFullName: AppCompatTextView? = null
-    var mProfileView: ImageView? = null
+    private var mAuthorize: AppCompatButton? = null
+    private var mMakeApiCall: AppCompatButton? = null
+    private var mSignOut: AppCompatButton? = null
+    private var mGivenName: AppCompatTextView? = null
+    private var mFamilyName: AppCompatTextView? = null
+    private var mFullName: AppCompatTextView? = null
+    private var mProfileView: ImageView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,18 +61,18 @@ class MainActivity : AppCompatActivity() {
         mAuthState = restoreAuthState()
         val authState = mAuthState
 
-        if (authState != null && authState.isAuthorized()) {
-            if (mMakeApiCall!!.getVisibility() === View.GONE) {
-                mMakeApiCall!!.setVisibility(View.VISIBLE)
+        if (authState != null && authState.isAuthorized) {
+            if (mMakeApiCall!!.visibility == View.GONE) {
+                mMakeApiCall!!.visibility = View.VISIBLE
                 mMakeApiCall!!.setOnClickListener(MakeApiCallListener(this, authState, AuthorizationService(this)))
             }
-            if (mSignOut!!.getVisibility() === View.GONE) {
-                mSignOut!!.setVisibility(View.VISIBLE)
+            if (mSignOut!!.visibility == View.GONE) {
+                mSignOut!!.visibility = View.VISIBLE
                 mSignOut!!.setOnClickListener(SignOutListener(this))
             }
         } else {
-            mMakeApiCall!!.setVisibility(View.GONE)
-            mSignOut!!.setVisibility(View.GONE)
+            mMakeApiCall!!.visibility = View.GONE
+            mSignOut!!.visibility = View.GONE
         }
     }
 
@@ -100,6 +103,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("ApplySharedPref")
     private fun persistAuthState(authState: AuthState) {
         getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE).edit()
                 .putString(AUTH_STATE, authState.jsonSerializeString())
@@ -136,11 +140,11 @@ class MainActivity : AppCompatActivity() {
         if (intent != null) {
             val action = intent.action
             when (action) {
-                "com.ef.appauthexample.HANDLE_AUTHORIZATION_RESPONSE" -> if (!intent.hasExtra(USED_INTENT)) {
+                AUTH_RESPONSE_ACTION -> if (!intent.hasExtra(USED_INTENT)) {
                     handleAuthorizationResponse(intent)
                     intent.putExtra(USED_INTENT, true)
                 }
-            }// do nothing
+            }
         }
     }
 
@@ -171,10 +175,10 @@ class MainActivity : AppCompatActivity() {
             val pendingIntent = PendingIntent.getActivity(
                     view.context,
                     request.hashCode(),
-                    Intent("com.ef.appauthexample.HANDLE_AUTHORIZATION_RESPONSE"),
+                    Intent(AUTH_RESPONSE_ACTION),
                     0
             )
-            AuthorizationService(view.getContext()).performAuthorizationRequest(request, pendingIntent)
+            AuthorizationService(view.context.applicationContext).performAuthorizationRequest(request, pendingIntent)
         }
     }
 
