@@ -1,7 +1,6 @@
 package com.ef.appauthexample
 
 import android.annotation.SuppressLint
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -10,10 +9,12 @@ import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.AppCompatButton
 import android.support.v7.widget.AppCompatTextView
 import android.text.TextUtils
+import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import com.ef.appauthexample.MainApplication.Companion.LOG_TAG
+import kotlinx.android.synthetic.main.activity_main.*
 import net.openid.appauth.*
 import org.json.JSONException
 
@@ -22,18 +23,18 @@ private val AUTH_RESPONSE_ACTION = "com.ef.appauthexample.HANDLE_AUTHORIZATION_R
 private val AUTH_REDIRECT_URL = Uri.parse("com.ef.appauthexample:/oauth2callback")
 
 private val AUTH_SERVICE_CONFIG = AuthorizationServiceConfiguration(
-        Uri.parse("https://internal-cne1qasso-int-alb-1026644593.cn-north-1.elb.amazonaws.com.cn/connect/authorize"),
-        Uri.parse("https://internal-cne1qasso-int-alb-1026644593.cn-north-1.elb.amazonaws.com.cn/connect/token")
+        Uri.parse("https://passport-qa.ef.com/connect/authorize"),
+        Uri.parse("https://passport-qa.ef.com/connect/token")
 )
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private val SHARED_PREFERENCES_NAME = "AuthStatePreference"
     private val AUTH_STATE = "AUTH_STATE"
     private val USED_INTENT = "USED_INTENT"
 
     private var mMainApplication: MainApplication? = null
-
+    val RC_AUTH = 1000
     // state
     var mAuthState: AuthState? = null
 
@@ -57,11 +58,10 @@ class MainActivity : AppCompatActivity() {
         mFamilyName = findViewById<AppCompatTextView>(R.id.familyName)
         mFullName = findViewById<AppCompatTextView>(R.id.fullName)
         mProfileView = findViewById<ImageView>(R.id.profileImage)
-
+        tv_access_token.movementMethod = ScrollingMovementMethod.getInstance()
         enablePostAuthorizationFlows()
 
-        // wire click listeners
-        mAuthorize!!.setOnClickListener(AuthorizeListener())
+        mAuthorize?.setOnClickListener(this)
     }
 
     private fun enablePostAuthorizationFlows() {
@@ -102,6 +102,14 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     if (tokenResponse != null) {
                         authState.update(tokenResponse, exception)
+                        authState.performActionWithFreshTokens(service, AuthState.AuthStateAction { accessToken, idToken, ex ->
+                            if (ex != null) {
+
+                            }
+                            tv_access_token.text = accessToken
+
+
+                        })
                         persistAuthState(authState)
                         Log.i(LOG_TAG, String.format("Token Response [ Access Token: %s, ID Token: %s ]", tokenResponse.accessToken, tokenResponse.idToken))
                     }
@@ -159,29 +167,28 @@ class MainActivity : AppCompatActivity() {
         checkIntent(intent)
     }
 
-    /**
-     * Kicks off the authorization flow.
-     */
-    class AuthorizeListener : View.OnClickListener {
-        override fun onClick(view: View) {
-            val request = AuthorizationRequest.Builder(
-                    AUTH_SERVICE_CONFIG,
-                    AUTH_CLIENT_ID,
-                    ResponseTypeValues.CODE,
-                    AUTH_REDIRECT_URL
-            )
-                    .setScopes("openid", "efpv2")
-                    .build()
-
-            val pendingIntent = PendingIntent.getActivity(
-                    view.context,
-                    request.hashCode(),
-                    Intent(AUTH_RESPONSE_ACTION),
-                    0
-            )
-            AuthorizationService(view.context.applicationContext).performAuthorizationRequest(request, pendingIntent)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+        if (requestCode == RC_AUTH) {
+            handleAuthorizationResponse(data)
+        } else {
+            // ...
         }
     }
+
+    override fun onClick(view: View?) {
+        val request = AuthorizationRequest.Builder(
+                AUTH_SERVICE_CONFIG,
+                AUTH_CLIENT_ID,
+                ResponseTypeValues.CODE,
+                AUTH_REDIRECT_URL
+        )
+                .setScopes("openid", "efpv2")
+                .build()
+        val authService = AuthorizationService(this)
+        val authIntent = authService.getAuthorizationRequestIntent(request)
+        startActivityForResult(authIntent, RC_AUTH)
+    }
+
 
     class SignOutListener(private val mMainActivity: MainActivity) : View.OnClickListener {
         override fun onClick(view: View) {
